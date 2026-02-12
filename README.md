@@ -97,13 +97,16 @@ If using Pterodactyl Panel:
 ```
 soji-discord-bot/
 │
+├── data/
+├── feature/
+├── public/
+├── templates/
 ├── bot.js
-├── commands/
-├── events/
-├── dashboard/
-├── utils/
-├── assets/
+├── main.js
 ├── package.json
+├── server.js
+├── start-all.js
+├── welcome.js
 └── README.md
 ```
 ------------------------------------------------------------------------
