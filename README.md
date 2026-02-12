@@ -1,6 +1,6 @@
 # 🌸 Soji Discord Bot
 
-Ultimate All-In-One Discord Bot\
+ All-In-One Discord Bot\
 **Anime • RPG • Economy • Anti-Nuke • Ticket • Monitoring • Music**
 
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
@@ -94,9 +94,18 @@ If using Pterodactyl Panel:
 
 ## 📂 Project Structure
 
-soji-discord-bot/ │ ├── bot.js ├── commands/ ├── events/ ├── dashboard/
-├── utils/ ├── assets/ ├── package.json └── README.md
-
+```
+soji-discord-bot/
+│
+├── bot.js
+├── commands/
+├── events/
+├── dashboard/
+├── utils/
+├── assets/
+├── package.json
+└── README.md
+```
 ------------------------------------------------------------------------
 
 ## 📜 Command Preview
