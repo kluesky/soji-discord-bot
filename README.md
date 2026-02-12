@@ -1,38 +1,12 @@
-```{=html}
-<!-- BANNER -->
-```
-```{=html}
-<p align="center">
-```
-`<img src="https://raw.githubusercontent.com/kluesky/soji-discord-bot/main/assets/soji-banner.png" alt="Soji Banner" width="100%">`{=html}
-```{=html}
-</p>
-```
-```{=html}
-<h1 align="center">
-```
-🌸 Soji Discord Bot
-```{=html}
-</h1>
-```
-```{=html}
-<p align="center">
-```
-All‑In‑One Discord Bot --- Anime • RPG • Economy • Anti‑Nuke •
-Ticket • Monitoring • Music
-```{=html}
-</p>
-```
-```{=html}
-<p align="center">
-```
-`<img src="https://img.shields.io/badge/Node.js-18+-green">`{=html}
-`<img src="https://img.shields.io/badge/discord.js-v14-blue">`{=html}
-`<img src="https://img.shields.io/badge/License-MIT-yellow">`{=html}
-`<img src="https://img.shields.io/badge/Status-Production-brightgreen">`{=html}
-```{=html}
-</p>
-```
+# 🌸 Soji Discord Bot
+
+Ultimate All-In-One Discord Bot\
+**Anime • RPG • Economy • Anti-Nuke • Ticket • Monitoring • Music**
+
+![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+![discord.js](https://img.shields.io/badge/discord.js-v14-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Status](https://img.shields.io/badge/Status-Production-brightgreen)
 
 ------------------------------------------------------------------------
 
@@ -42,7 +16,7 @@ Ticket • Monitoring • Music
 -   🗡️ RPG System with progression
 -   💰 Economy System
 -   🎫 Advanced Ticket System
--   🛡️ Anti-Nuke Protection System
+-   🛡️ Anti-Nuke Protection
 -   📊 Monitoring & Live Dashboard (Express + Socket.io)
 -   🔔 Real-time Anime Notifications
 -   🎵 YouTube Music System
@@ -101,7 +75,7 @@ npm run dev
 
 To ensure music works correctly:
 
--   FFmpeg installed on server
+-   FFmpeg installed
 -   Stable internet connection
 -   Node 18+
 -   UDP enabled (for voice connection)
@@ -113,7 +87,7 @@ To ensure music works correctly:
 If using Pterodactyl Panel:
 
 -   Use Node 18 or 20
--   Install ffmpeg package
+-   Install ffmpeg
 -   Ensure network & UDP access allowed
 
 ------------------------------------------------------------------------
@@ -161,20 +135,6 @@ soji-discord-bot/ │ ├── bot.js ├── commands/ ├── events/ ├
 
 ------------------------------------------------------------------------
 
-## 📊 Dashboard Preview
-
-> Add screenshots inside /assets and update paths below
-
-```{=html}
-<p align="center">
-```
-`<img src="https://files.catbox.moe/jw1zkj.jpg" width="90%">`{=html}
-```{=html}
-</p>
-```
-
-------------------------------------------------------------------------
-
 ## 🔐 Required Bot Permissions
 
 -   Send Messages
@@ -186,7 +146,7 @@ soji-discord-bot/ │ ├── bot.js ├── commands/ ├── events/ ├
 
 ------------------------------------------------------------------------
 
-## 🧠 Why Soji?
+## 🧠 About Soji
 
 Soji is built as a scalable multi-system Discord bot combining:
 
@@ -216,11 +176,4 @@ If you like this project:
 
 ------------------------------------------------------------------------
 
-```{=html}
-<p align="center">
-```
-`<strong>`{=html}Soji --- Not just a bot. A complete
-system.`</strong>`{=html}
-```{=html}
-</p>
-```
+**Soji --- Not just a bot. A complete system.**
