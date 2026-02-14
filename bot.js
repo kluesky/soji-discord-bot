@@ -1,5 +1,7 @@
-// bot.js - BOT UTAMA DENGAN MUSIC BOT & SEMUA FITUR!
+// bot.js - BOT UTAMA DENGAN FEATURE FOLDER (MODULAR)
 const { Client, GatewayIntentBits, REST, Routes, Partials } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
 const client = new Client({ 
     intents: [
@@ -10,7 +12,7 @@ const client = new Client({
         GatewayIntentBits.GuildPresences,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildVoiceStates, // 🔥 PENTING UNTUK MUSIC BOT!
+        GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildModeration,
         GatewayIntentBits.AutoModerationConfiguration,
         GatewayIntentBits.AutoModerationExecution,
@@ -30,41 +32,134 @@ const CLIENT_ID = 'ID';
 client.welcomeConfig = new Map();
 const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
 
-// ==================== SYSTEM INITIALIZATION ====================
-// Existing systems
-let monitor = null;
-let ticketSystem = null;
-let templateSystem = null;
-let economySystem = null;
-let automodSystem = null;
-let giveawaySystem = null;
-let voiceCreatorSystem = null;
-let translatorSystem = null;
+// ==================== FEATURE MANAGER ====================
+class FeatureManager {
+    constructor(client) {
+        this.client = client;
+        this.features = new Map();
+        this.commands = [];
+        this.featurePath = path.join(__dirname, 'features');
+    }
 
-// ==================== ANIME SYSTEMS ====================
-let animeBattleSystem = null;
-let animeGuildSystem = null;
-let animeFestivalSystem = null;
-let animeTheaterSystem = null;
-let animeTournamentSystem = null;
+    async loadFeatures() {
+        console.log('\n📂 LOADING FEATURES FROM FOLDER...');
+        console.log('='.repeat(50));
 
-// ==================== COMMAND MONITOR ====================
-let commandMonitor = null;
+        // Buat folder features jika belum ada
+        if (!fs.existsSync(this.featurePath)) {
+            fs.mkdirSync(this.featurePath);
+            console.log('📁 Folder features dibuat!');
+        }
 
-// ==================== RPG GAME ====================
-let rpgGame = null;
+        // Daftar file fitur yang akan diload
+        const featureFiles = [
+            'ticket.js',
+            'template.js',
+            'monitoring.js',
+            'economy.js',
+            'automod.js',
+            'giveaway.js',
+            'voicecreator.js',
+            'translator.js',
+            'anime-battle.js',
+            'anime-guild.js',
+            'anime-festival.js',
+            'anime-theater.js',
+            'anime-tournament.js',
+            'command-monitor.js',
+            'rpg-game.js',
+            'anti-nuke.js',
+            'menu.js',
+            'anime-reminder.js',
+            'music.js',
+            'afk-keeper.js',
+            'chisato-ai.js'
+        ];
 
-// ==================== ANTI NUKE ====================
-let antiNuke = null;
+        for (const file of featureFiles) {
+            try {
+                const featurePath = path.join(this.featurePath, file);
+                
+                // Cek apakah file ada
+                if (!fs.existsSync(featurePath)) {
+                    console.log(`⚠️  ${file} tidak ditemukan, skipping...`);
+                    continue;
+                }
 
-// ==================== BOT MENU ====================
-let botMenu = null;
+                const featureName = file.replace('.js', '');
+                const FeatureClass = require(featurePath);
+                
+                // Inisialisasi fitur
+                const featureInstance = new FeatureClass(this.client);
+                this.features.set(featureName, featureInstance);
+                
+                // Load commands dari fitur
+                if (FeatureClass.getCommands) {
+                    const featureCmds = FeatureClass.getCommands();
+                    this.commands.push(...featureCmds);
+                    console.log(`✅ Loaded ${featureCmds.length} commands from ${file}`);
+                }
 
-// ==================== ANIME REMINDER ====================
-let animeReminder = null;
+                // Panggil init jika ada
+                if (featureInstance.init) {
+                    await featureInstance.init();
+                }
 
-// ==================== MUSIC BOT ====================
-let musicSystem = null;
+            } catch (error) {
+                console.error(`❌ Failed to load ${file}:`, error.message);
+            }
+        }
+
+        console.log('='.repeat(50));
+        console.log(`📊 Total: ${this.features.size} features loaded`);
+        console.log(`📋 Commands: ${this.commands.length}`);
+        
+        return this.commands;
+    }
+
+    getFeature(name) {
+        return this.features.get(name);
+    }
+
+    async handleInteraction(interaction) {
+        for (const [name, feature] of this.features) {
+            if (feature.handleInteraction) {
+                try {
+                    await feature.handleInteraction(interaction);
+                } catch (error) {
+                    // Skip if not handled by this feature
+                }
+            }
+        }
+    }
+}
+
+// Initialize Feature Manager
+const featureManager = new FeatureManager(client);
+client.featureManager = featureManager;
+
+// ==================== WHATSAPP BOT INTEGRATION ====================
+let waBot = null;
+
+try {
+    const waBotPath = path.join(__dirname, 'botwa', 'index.js');
+    if (fs.existsSync(waBotPath)) {
+        const waBotModule = require('./botwa/index.js');
+        if (typeof waBotModule === 'function') {
+            waBot = waBotModule();
+        } else {
+            waBot = waBotModule;
+        }
+        console.log('\n' + '📱'.repeat(30));
+        console.log('📱 WHATSAPP BOT INTEGRATION');
+        console.log('✅ WhatsApp Bot loaded from ./botwa/');
+        console.log('📱 WhatsApp Bot is running alongside Discord!');
+        console.log('📱'.repeat(30) + '\n');
+    }
+} catch (error) {
+    console.log('\n⚠️ WhatsApp Bot error:', error.message);
+    console.log('📱 Discord only mode - WA bot not loaded\n');
+}
 
 // ==================== BOT READY ====================
 client.once('ready', async () => {
@@ -80,297 +175,18 @@ client.once('ready', async () => {
         const mainCommands = mainModule.commands;
         console.log(`✅ Loaded ${mainCommands.length} main commands`);
 
-        // ===== LOAD ALL SYSTEM COMMANDS =====
-        const allCommands = [...mainCommands];
+        // ===== LOAD FEATURES =====
+        const featureCommands = await featureManager.loadFeatures();
         
-        // 1. TICKET SYSTEM
-        let ticketCmds = [];
-        try {
-            const TicketSystem = require('./ticket.js');
-            ticketSystem = new TicketSystem(client);
-            ticketCmds = TicketSystem.getCommands ? TicketSystem.getCommands() : [];
-            allCommands.push(...ticketCmds);
-            console.log(`✅ Loaded Ticket System: ${ticketCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Ticket System error: ${error.message}`);
-        }
-
-        // 2. TEMPLATE SYSTEM
-        let templateCmds = [];
-        try {
-            const TemplateSystem = require('./template.js');
-            templateSystem = new TemplateSystem(client);
-            templateCmds = TemplateSystem.getCommands ? TemplateSystem.getCommands() : [];
-            allCommands.push(...templateCmds);
-            console.log(`✅ Loaded Template System: ${templateCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Template System error: ${error.message}`);
-        }
-
-        // 3. MONITORING SYSTEM
-        let monitorCmds = [];
-        try {
-            const ServerMonitor = require('./monitor.js');
-            monitor = new ServerMonitor(client);
-            monitorCmds = ServerMonitor.getCommands ? ServerMonitor.getCommands() : [];
-            allCommands.push(...monitorCmds);
-            console.log(`✅ Loaded Monitoring System: ${monitorCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Monitoring System error: ${error.message}`);
-        }
-
-        // 4. ECONOMY SYSTEM
-        let economyCmds = [];
-        try {
-            const EconomySystem = require('./economy.js');
-            economySystem = new EconomySystem(client);
-            client.economySystem = economySystem;
-            economyCmds = EconomySystem.getCommands ? EconomySystem.getCommands() : [];
-            allCommands.push(...economyCmds);
-            console.log(`✅ Loaded Economy System: ${economyCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Economy System error: ${error.message}`);
-        }
-
-        // 5. AUTOMOD SYSTEM
-        let automodCmds = [];
-        try {
-            const AutoModSystem = require('./automod.js');
-            automodSystem = new AutoModSystem(client);
-            client.automodSystem = automodSystem;
-            automodCmds = AutoModSystem.getCommands ? AutoModSystem.getCommands() : [];
-            allCommands.push(...automodCmds);
-            console.log(`✅ Loaded AutoMod System: ${automodCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ AutoMod System error: ${error.message}`);
-        }
-
-        // 6. GIVEAWAY SYSTEM
-        let giveawayCmds = [];
-        try {
-            const GiveawaySystem = require('./giveaway.js');
-            giveawaySystem = new GiveawaySystem(client);
-            client.giveawaySystem = giveawaySystem;
-            giveawayCmds = GiveawaySystem.getCommands ? GiveawaySystem.getCommands() : [];
-            allCommands.push(...giveawayCmds);
-            console.log(`✅ Loaded Giveaway System: ${giveawayCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Giveaway System error: ${error.message}`);
-        }
-
-        // 7. VOICE CREATOR SYSTEM
-        let voiceCmds = [];
-        try {
-            const VoiceCreatorSystem = require('./voicecreator.js');
-            voiceCreatorSystem = new VoiceCreatorSystem(client);
-            client.voiceCreatorSystem = voiceCreatorSystem;
-            voiceCmds = VoiceCreatorSystem.getCommands ? VoiceCreatorSystem.getCommands() : [];
-            allCommands.push(...voiceCmds);
-            console.log(`✅ Loaded Voice Creator: ${voiceCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Voice Creator error: ${error.message}`);
-        }
-
-        // 8. TRANSLATOR SYSTEM
-        let translatorCmds = [];
-        try {
-            const TranslatorSystem = require('./translator.js');
-            translatorSystem = new TranslatorSystem(client);
-            client.translatorSystem = translatorSystem;
-            translatorCmds = TranslatorSystem.getCommands ? TranslatorSystem.getCommands() : [];
-            allCommands.push(...translatorCmds);
-            console.log(`✅ Loaded Translator System: ${translatorCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Translator System error: ${error.message}`);
-        }
-
-        // ==================== ANIME SYSTEMS ====================
+        // ===== COMBINE ALL COMMANDS =====
+        const allCommands = [...mainCommands, ...featureCommands];
         
-        // 9. ANIME BATTLE SYSTEM - SAKURA CARD CAPTURE
-        let battleCmds = [];
-        try {
-            const AnimeBattleSystem = require('./anime-battle.js');
-            animeBattleSystem = new AnimeBattleSystem(client);
-            client.animeBattleSystem = animeBattleSystem;
-            battleCmds = AnimeBattleSystem.getCommands ? AnimeBattleSystem.getCommands() : [];
-            allCommands.push(...battleCmds);
-            console.log(`✅ Loaded Anime Battle: ${battleCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Anime Battle error: ${error.message}`);
-        }
-
-        // 10. ANIME GUILD SYSTEM
-        let guildCmds = [];
-        try {
-            const AnimeGuildSystem = require('./anime-guild.js');
-            animeGuildSystem = new AnimeGuildSystem(client);
-            client.animeGuildSystem = animeGuildSystem;
-            guildCmds = AnimeGuildSystem.getCommands ? AnimeGuildSystem.getCommands() : [];
-            allCommands.push(...guildCmds);
-            console.log(`✅ Loaded Anime Guild: ${guildCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Anime Guild error: ${error.message}`);
-        }
-
-        // 11. ANIME FESTIVAL SYSTEM
-        let festivalCmds = [];
-        try {
-            const AnimeFestivalSystem = require('./anime-festival.js');
-            animeFestivalSystem = new AnimeFestivalSystem(client);
-            client.animeFestivalSystem = animeFestivalSystem;
-            festivalCmds = AnimeFestivalSystem.getCommands ? AnimeFestivalSystem.getCommands() : [];
-            allCommands.push(...festivalCmds);
-            console.log(`✅ Loaded Anime Festival: ${festivalCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Anime Festival error: ${error.message}`);
-        }
-
-        // 12. ANIME THEATER SYSTEM
-        let theaterCmds = [];
-        try {
-            const AnimeTheaterSystem = require('./anime-theater.js');
-            animeTheaterSystem = new AnimeTheaterSystem(client);
-            client.animeTheaterSystem = animeTheaterSystem;
-            theaterCmds = AnimeTheaterSystem.getCommands ? AnimeTheaterSystem.getCommands() : [];
-            allCommands.push(...theaterCmds);
-            console.log(`✅ Loaded Anime Theater: ${theaterCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Anime Theater error: ${error.message}`);
-        }
-
-        // 13. ANIME TOURNAMENT SYSTEM
-        let tourneyCmds = [];
-        try {
-            const AnimeTournamentSystem = require('./anime-tournament.js');
-            animeTournamentSystem = new AnimeTournamentSystem(client);
-            client.animeTournamentSystem = animeTournamentSystem;
-            tourneyCmds = AnimeTournamentSystem.getCommands ? AnimeTournamentSystem.getCommands() : [];
-            allCommands.push(...tourneyCmds);
-            console.log(`✅ Loaded Anime Tournament: ${tourneyCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Anime Tournament error: ${error.message}`);
-        }
-
-        // ==================== COMMAND MONITOR SYSTEM ====================
-        
-        // 14. COMMAND MONITOR SYSTEM
-        let monitorCmds2 = [];
-        try {
-            const CommandMonitor = require('./command-monitor.js');
-            commandMonitor = new CommandMonitor(client);
-            client.commandMonitor = commandMonitor;
-            
-            // Kumpulkan semua commands untuk di monitor
-            const allCommandsList = [
-                ...mainCommands, 
-                ...ticketCmds, 
-                ...templateCmds, 
-                ...monitorCmds, 
-                ...economyCmds, 
-                ...automodCmds, 
-                ...giveawayCmds, 
-                ...voiceCmds, 
-                ...translatorCmds, 
-                ...battleCmds, 
-                ...guildCmds, 
-                ...festivalCmds, 
-                ...theaterCmds, 
-                ...tourneyCmds
-            ];
-            
-            commandMonitor.setAllCommands(allCommandsList);
-            
-            monitorCmds2 = CommandMonitor.getCommands ? CommandMonitor.getCommands() : [];
-            allCommands.push(...monitorCmds2);
-            console.log(`✅ Loaded Command Monitor: ${monitorCmds2.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Command Monitor error: ${error.message}`);
-        }
-
-        // ==================== RPG GAME SYSTEM ====================
-        
-        // 15. RPG GAME - IDLE RPG
-        let rpgCmds = [];
-        try {
-            const RPGame = require('./rpg-game.js');
-            rpgGame = new RPGame(client);
-            client.rpgGame = rpgGame;
-            rpgCmds = RPGame.getCommands ? RPGame.getCommands() : [];
-            allCommands.push(...rpgCmds);
-            console.log(`✅ Loaded RPG Game: ${rpgCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ RPG Game error: ${error.message}`);
-        }
-
-        // ==================== ANTI NUKE SYSTEM ====================
-        
-        // 16. ANTI NUKE PREMIUM
-        let antiNukeCmds = [];
-        try {
-            const AntiNuke = require('./anti-nuke.js');
-            antiNuke = new AntiNuke(client);
-            client.antiNuke = antiNuke;
-            antiNukeCmds = AntiNuke.getCommands ? AntiNuke.getCommands() : [];
-            allCommands.push(...antiNukeCmds);
-            console.log(`✅ Loaded Anti Nuke Premium: ${antiNukeCmds.length} commands`);
-            console.log(`🛡️ 15+ Protection Layers Active!`);
-        } catch (error) {
-            console.log(`⚠️ Anti Nuke error: ${error.message}`);
-        }
-
-        // ==================== BOT MENU SYSTEM ====================
-        
-        // 17. BOT MENU
-        let menuCmds = [];
-        try {
-            const BotMenu = require('./menu.js');
-            botMenu = new BotMenu(client);
-            client.botMenu = botMenu;
-            menuCmds = BotMenu.getCommands ? BotMenu.getCommands() : [];
-            allCommands.push(...menuCmds);
-            console.log(`✅ Loaded Bot Menu: ${menuCmds.length} commands`);
-        } catch (error) {
-            console.log(`⚠️ Bot Menu error: ${error.message}`);
-        }
-
-        // ==================== ANIME REMINDER SYSTEM ====================
-        
-        // 18. ANIME REMINDER
-        let reminderCmds = [];
-        try {
-            const AnimeReminder = require('./anime-reminder.js');
-            animeReminder = new AnimeReminder(client);
-            client.animeReminder = animeReminder;
-            reminderCmds = AnimeReminder.getCommands ? AnimeReminder.getCommands() : [];
-            allCommands.push(...reminderCmds);
-            console.log(`✅ Loaded Anime Reminder: ${reminderCmds.length} commands`);
-            console.log(`📺 Real-time anime release notification ready!`);
-        } catch (error) {
-            console.log(`⚠️ Anime Reminder error: ${error.message}`);
-        }
-
-        // ==================== MUSIC BOT SYSTEM ====================
-        
-        // 19. MUSIC BOT
-        let musicCmds = [];
-        try {
-            const MusicSystem = require('./music.js');
-            musicSystem = new MusicSystem(client);
-            client.musicSystem = musicSystem;
-            musicCmds = MusicSystem.getCommands ? MusicSystem.getCommands() : [];
-            allCommands.push(...musicCmds);
-            console.log(`✅ Loaded Music System: ${musicCmds.length} commands`);
-            console.log(`🎵 Music Bot ready!`);
-        } catch (error) {
-            console.log(`⚠️ Music System error: ${error.message}`);
-        }
-
         // ===== COMMAND SUMMARY =====
         console.log('\n' + '='.repeat(50));
         console.log(`📋 TOTAL COMMANDS: ${allCommands.length}`);
         console.log('='.repeat(50));
         
-        // 🔥 GLOBAL VARIABLE UNTUK DASHBOARD
+        // GLOBAL VARIABLE
         global.allCommands = allCommands;
         global.client = client;
 
@@ -395,28 +211,23 @@ client.once('ready', async () => {
             console.log(`⚠️ Welcome system error: ${error.message}`);
         }
 
-        // ===== START DASHBOARD =====
-        try {
-            const dashboard = require('./server.js');
-            dashboard.setBotClient(client);
-            dashboard.start();
-            console.log('🌐 Dashboard: http://localhost:3000');
-        } catch (error) {
-            console.log(`⚠️ Dashboard error: ${error.message}`);
-        }
-
         // ===== SET STATUS =====
         client.user.setPresence({
             activities: [{ 
-                name: `${allCommands.length} commands | /music play`, 
+                name: `${allCommands.length} commands | /menu | 📱 WA Bot`, 
                 type: 3 
             }],
             status: 'online'
         });
 
         console.log('\n' + '='.repeat(50));
-        console.log('🚀 BOT IS READY WITH ALL SYSTEMS!');
-        console.log('🎵 Music Bot | 📺 Anime Reminder | 📋 /menu | 🛡️ Anti Nuke | 🎮 RPG');
+        console.log('🚀 BOT IS READY WITH FEATURE FOLDER!');
+        console.log(`📂 Loaded ${featureManager.features.size} features`);
+        if (waBot) {
+            console.log('📱 WhatsApp Bot: ✅ RUNNING');
+        } else {
+            console.log('📱 WhatsApp Bot: ❌ NOT LOADED');
+        }
         console.log('='.repeat(50) + '\n');
 
     } catch (error) {
@@ -427,215 +238,280 @@ client.once('ready', async () => {
 // ==================== INTERACTION HANDLER ====================
 client.on('interactionCreate', async (interaction) => {
     try {
-        // ===== BOT MENU INTERACTIONS =====
-        if (botMenu && botMenu.handleInteraction) {
-            await botMenu.handleInteraction(interaction);
+        // Handle feature interactions
+        await featureManager.handleInteraction(interaction);
+
+        // Handle custom interactions
+        if (interaction.isButton()) {
+            // Ticket System
+            const ticketSystem = featureManager.getFeature('ticket');
+            if (ticketSystem && interaction.customId?.startsWith('ticket_')) {
+                await ticketSystem.handleInteraction(interaction);
+                return;
+            }
+            
+            // Template System
+            const templateSystem = featureManager.getFeature('template');
+            if (templateSystem && (
+                interaction.customId?.startsWith('template_') || 
+                interaction.customId === 'template_category' || 
+                interaction.customId === 'template_select'
+            )) {
+                await templateSystem.handleInteraction(interaction);
+                return;
+            }
+            
+            // Monitoring System
+            const monitoringSystem = featureManager.getFeature('monitoring');
+            if (monitoringSystem && interaction.customId?.startsWith('monitor_')) {
+                await monitoringSystem.handleInteraction(interaction);
+                return;
+            }
+            
+            // Giveaway System
+            const giveawaySystem = featureManager.getFeature('giveaway');
+            if (giveawaySystem && interaction.customId?.startsWith('giveaway_')) {
+                await giveawaySystem.handleInteraction(interaction);
+                return;
+            }
+            
+            // Economy System
+            const economySystem = featureManager.getFeature('economy');
+            if (economySystem && interaction.customId?.startsWith('economy_')) {
+                await economySystem.handleInteraction(interaction);
+                return;
+            }
+            
+            // Voice Creator
+            const voiceCreator = featureManager.getFeature('voicecreator');
+            if (voiceCreator && interaction.isButton() && interaction.customId.startsWith('vc_')) {
+                await voiceCreator.handlePanelButtons(interaction);
+                return;
+            }
         }
 
-        // ===== ANIME REMINDER INTERACTIONS =====
-        if (animeReminder && animeReminder.handleInteraction) {
-            await animeReminder.handleInteraction(interaction);
-        }
-
-        // ===== COMMAND MONITOR INTERACTIONS =====
-        if (commandMonitor && commandMonitor.handleInteraction) {
-            await commandMonitor.handleInteraction(interaction);
-        }
-
-        // ===== RPG GAME INTERACTIONS =====
-        if (rpgGame && rpgGame.handleInteraction) {
-            await rpgGame.handleInteraction(interaction);
-        }
-
-        // ===== ANTI NUKE INTERACTIONS =====
-        if (antiNuke && antiNuke.handleInteraction) {
-            await antiNuke.handleInteraction(interaction);
-        }
-
-        // ===== ANIME BATTLE INTERACTIONS =====
-        if (animeBattleSystem && animeBattleSystem.handleInteraction) {
-            await animeBattleSystem.handleInteraction(interaction);
-        }
-
-        // ===== ANIME GUILD INTERACTIONS =====
-        if (animeGuildSystem && animeGuildSystem.handleInteraction) {
-            await animeGuildSystem.handleInteraction(interaction);
-        }
-
-        // ===== ANIME FESTIVAL INTERACTIONS =====
-        if (animeFestivalSystem && animeFestivalSystem.handleInteraction) {
-            await animeFestivalSystem.handleInteraction(interaction);
-        }
-
-        // ===== ANIME THEATER INTERACTIONS =====
-        if (animeTheaterSystem && animeTheaterSystem.handleInteraction) {
-            await animeTheaterSystem.handleInteraction(interaction);
-        }
-
-        // ===== ANIME TOURNAMENT INTERACTIONS =====
-        if (animeTournamentSystem && animeTournamentSystem.handleInteraction) {
-            await animeTournamentSystem.handleInteraction(interaction);
-        }
-
-        // ===== TICKET SYSTEM =====
-        if (ticketSystem && interaction.customId?.startsWith('ticket_')) {
-            await ticketSystem.handleInteraction(interaction);
-            return;
-        }
-
-        // ===== TEMPLATE SYSTEM =====
-        if (templateSystem && (
-            interaction.customId?.startsWith('template_') ||
-            interaction.customId === 'template_category' ||
-            interaction.customId === 'template_select'
-        )) {
-            await templateSystem.handleInteraction(interaction);
-            return;
-        }
-
-        // ===== MONITORING SYSTEM =====
-        if (monitor && interaction.customId?.startsWith('monitor_')) {
-            await monitor.handleInteraction(interaction);
-            return;
-        }
-
-        // ===== GIVEAWAY SYSTEM =====
-        if (giveawaySystem && interaction.customId?.startsWith('giveaway_')) {
-            await giveawaySystem.handleInteraction(interaction);
-            return;
-        }
-
-        // ===== ECONOMY SYSTEM =====
-        if (economySystem && interaction.customId?.startsWith('economy_')) {
-            await economySystem.handleInteraction(interaction);
-            return;
-        }
-
-        // ===== TRANSLATOR SYSTEM =====
-        if (translatorSystem && interaction.isModalSubmit() && interaction.customId === 'translate_bulk_modal') {
-            await translatorSystem.handleInteraction(interaction);
-            return;
+        // Handle modal submissions
+        if (interaction.isModalSubmit()) {
+            const translator = featureManager.getFeature('translator');
+            if (translator && interaction.customId === 'translate_bulk_modal') {
+                await translator.handleInteraction(interaction);
+                return;
+            }
         }
 
         // ===== SLASH COMMANDS =====
         if (interaction.isCommand()) {
             const { commandName } = interaction;
             
-            // ===== MUSIC BOT =====
-            if (commandName === 'music' && musicSystem) {
-                const MusicSystem = require('./music.js');
-                await MusicSystem.handleCommand(interaction, musicSystem);
+            // Chisato AI
+            if (commandName === 'chisato') {
+                const chisato = featureManager.getFeature('chisato-ai');
+                if (chisato) {
+                    const ChisatoAI = require('./features/chisato-ai.js');
+                    await ChisatoAI.handleCommand(interaction, chisato);
+                    return;
+                }
             }
             
-            // ===== ANIME REMINDER =====
-            else if (commandName === 'anime-reminder' && animeReminder) {
-                const AnimeReminder = require('./anime-reminder.js');
-                await AnimeReminder.handleCommand(interaction, animeReminder);
+            // Music Bot
+            if (commandName === 'music') {
+                const music = featureManager.getFeature('music');
+                if (music) {
+                    const MusicSystem = require('./features/music.js');
+                    await MusicSystem.handleCommand(interaction, music);
+                    return;
+                }
             }
             
-            // ===== BOT MENU =====
-            else if (commandName === 'menu' && botMenu) {
-                const BotMenu = require('./menu.js');
-                await BotMenu.handleCommand(interaction, botMenu);
+            // Anime Reminder
+            if (commandName === 'anime-reminder') {
+                const reminder = featureManager.getFeature('anime-reminder');
+                if (reminder) {
+                    const AnimeReminder = require('./features/anime-reminder.js');
+                    await AnimeReminder.handleCommand(interaction, reminder);
+                    return;
+                }
             }
             
-            // ===== ANTI NUKE COMMANDS =====
-            else if (commandName === 'antinuke' && antiNuke) {
-                const AntiNuke = require('./anti-nuke.js');
-                await AntiNuke.handleCommand(interaction, antiNuke);
-            }
-            else if (commandName === 'antinuke-whitelist' && antiNuke) {
-                const AntiNuke = require('./anti-nuke.js');
-                await AntiNuke.handleCommand(interaction, antiNuke);
-            }
-            else if (commandName === 'antinuke-protect' && antiNuke) {
-                const AntiNuke = require('./anti-nuke.js');
-                await AntiNuke.handleCommand(interaction, antiNuke);
-            }
-            else if (commandName === 'antinuke-restore' && antiNuke) {
-                const AntiNuke = require('./anti-nuke.js');
-                await AntiNuke.handleCommand(interaction, antiNuke);
+            // Bot Menu
+            if (commandName === 'menu') {
+                const menu = featureManager.getFeature('menu');
+                if (menu) {
+                    const BotMenu = require('./features/menu.js');
+                    await BotMenu.handleCommand(interaction, menu);
+                    return;
+                }
             }
             
-            // ===== RPG GAME =====
-            else if (commandName === 'rpg' && rpgGame) {
-                const RPGame = require('./rpg-game.js');
-                await RPGame.handleCommand(interaction, rpgGame);
+            // Anti Nuke Commands
+            if (commandName === 'antinuke' || commandName === 'antinuke-whitelist' || 
+                commandName === 'antinuke-protect' || commandName === 'antinuke-restore') {
+                const antiNuke = featureManager.getFeature('anti-nuke');
+                if (antiNuke) {
+                    const AntiNuke = require('./features/anti-nuke.js');
+                    await AntiNuke.handleCommand(interaction, antiNuke);
+                    return;
+                }
             }
             
-            // ===== COMMAND MONITOR =====
-            else if (commandName === 'botstats' && commandMonitor) {
-                const CommandMonitor = require('./command-monitor.js');
-                await CommandMonitor.handleCommand(interaction, commandMonitor);
-            }
-            else if (commandName === 'commandlist' && commandMonitor) {
-                const CommandMonitor = require('./command-monitor.js');
-                await CommandMonitor.handleCommand(interaction, commandMonitor);
-            }
-            
-            // ===== ANIME SYSTEMS =====
-            else if (commandName === 'anime' && animeBattleSystem) {
-                const AnimeBattleSystem = require('./anime-battle.js');
-                await AnimeBattleSystem.handleCommand(interaction, animeBattleSystem);
-            }
-            else if (commandName === 'guild' && animeGuildSystem) {
-                const AnimeGuildSystem = require('./anime-guild.js');
-                await AnimeGuildSystem.handleCommand(interaction, animeGuildSystem);
-            }
-            else if (commandName === 'festival' && animeFestivalSystem) {
-                const AnimeFestivalSystem = require('./anime-festival.js');
-                await AnimeFestivalSystem.handleCommand(interaction, animeFestivalSystem);
-            }
-            else if (commandName === 'theater' && animeTheaterSystem) {
-                const AnimeTheaterSystem = require('./anime-theater.js');
-                await AnimeTheaterSystem.handleCommand(interaction, animeTheaterSystem);
-            }
-            else if (commandName === 'tournament' && animeTournamentSystem) {
-                const AnimeTournamentSystem = require('./anime-tournament.js');
-                await AnimeTournamentSystem.handleCommand(interaction, animeTournamentSystem);
+            // RPG Game
+            if (commandName === 'rpg') {
+                const rpg = featureManager.getFeature('rpg-game');
+                if (rpg) {
+                    const RPGame = require('./features/rpg-game.js');
+                    await RPGame.handleCommand(interaction, rpg);
+                    return;
+                }
             }
             
-            // ===== EXISTING SYSTEMS =====
-            else if (commandName === 'ticket' && ticketSystem) {
-                const TicketSystem = require('./ticket.js');
-                await TicketSystem.handleCommand(interaction, ticketSystem);
+            // Command Monitor
+            if (commandName === 'botstats' || commandName === 'commandlist') {
+                const monitor = featureManager.getFeature('command-monitor');
+                if (monitor) {
+                    const CommandMonitor = require('./features/command-monitor.js');
+                    await CommandMonitor.handleCommand(interaction, monitor);
+                    return;
+                }
             }
-            else if (commandName === 'template' && templateSystem) {
-                const TemplateSystem = require('./template.js');
-                await TemplateSystem.handleCommand(interaction, templateSystem);
+            
+            // Anime Systems
+            if (commandName === 'anime') {
+                const anime = featureManager.getFeature('anime-battle');
+                if (anime) {
+                    const AnimeBattle = require('./features/anime-battle.js');
+                    await AnimeBattle.handleCommand(interaction, anime);
+                    return;
+                }
             }
-            else if (['setup_monitor', 'disable_monitor', 'server_stats', 'monitor_style'].includes(commandName) && monitor) {
-                const ServerMonitor = require('./monitor.js');
-                await ServerMonitor.handleCommand(interaction, monitor);
+            
+            if (commandName === 'guild') {
+                const guild = featureManager.getFeature('anime-guild');
+                if (guild) {
+                    const AnimeGuild = require('./features/anime-guild.js');
+                    await AnimeGuild.handleCommand(interaction, guild);
+                    return;
+                }
             }
-            else if (commandName === 'economy' && economySystem) {
-                const EconomySystem = require('./economy.js');
-                await EconomySystem.handleCommand(interaction, economySystem);
+            
+            if (commandName === 'festival') {
+                const festival = featureManager.getFeature('anime-festival');
+                if (festival) {
+                    const AnimeFestival = require('./features/anime-festival.js');
+                    await AnimeFestival.handleCommand(interaction, festival);
+                    return;
+                }
             }
-            else if (commandName === 'economy-admin' && economySystem) {
-                const EconomySystem = require('./economy.js');
-                await EconomySystem.handleCommand(interaction, economySystem);
+            
+            if (commandName === 'theater') {
+                const theater = featureManager.getFeature('anime-theater');
+                if (theater) {
+                    const AnimeTheater = require('./features/anime-theater.js');
+                    await AnimeTheater.handleCommand(interaction, theater);
+                    return;
+                }
             }
-            else if (commandName === 'automod' && automodSystem) {
-                const AutoModSystem = require('./automod.js');
-                await AutoModSystem.handleCommand(interaction, automodSystem);
+            
+            if (commandName === 'tournament') {
+                const tournament = featureManager.getFeature('anime-tournament');
+                if (tournament) {
+                    const AnimeTournament = require('./features/anime-tournament.js');
+                    await AnimeTournament.handleCommand(interaction, tournament);
+                    return;
+                }
             }
-            else if (commandName === 'giveaway' && giveawaySystem) {
-                const GiveawaySystem = require('./giveaway.js');
-                await GiveawaySystem.handleCommand(interaction, giveawaySystem);
+            
+            // Ticket System
+            if (commandName === 'ticket') {
+                const ticket = featureManager.getFeature('ticket');
+                if (ticket) {
+                    const TicketSystem = require('./features/ticket.js');
+                    await TicketSystem.handleCommand(interaction, ticket);
+                    return;
+                }
             }
-            else if (commandName === 'voice' && voiceCreatorSystem) {
-                const VoiceCreatorSystem = require('./voicecreator.js');
-                await VoiceCreatorSystem.handleCommand(interaction, voiceCreatorSystem);
+            
+            // Template System
+            if (commandName === 'template') {
+                const template = featureManager.getFeature('template');
+                if (template) {
+                    const TemplateSystem = require('./features/template.js');
+                    await TemplateSystem.handleCommand(interaction, template);
+                    return;
+                }
             }
-            else if (commandName === 'translate' && translatorSystem) {
-                const TranslatorSystem = require('./translator.js');
-                await TranslatorSystem.handleCommand(interaction, translatorSystem);
+            
+            // Monitoring System
+            if (['setup_monitor', 'disable_monitor', 'server_stats', 'monitor_style'].includes(commandName)) {
+                const monitoring = featureManager.getFeature('monitoring');
+                if (monitoring) {
+                    const ServerMonitor = require('./features/monitoring.js');
+                    await ServerMonitor.handleCommand(interaction, monitoring);
+                    return;
+                }
             }
-            else {
-                // Handle main commands
-                await require('./main.js').handleInteraction(interaction, client);
+            
+            // Economy System
+            if (commandName === 'economy' || commandName === 'economy-admin') {
+                const economy = featureManager.getFeature('economy');
+                if (economy) {
+                    const EconomySystem = require('./features/economy.js');
+                    await EconomySystem.handleCommand(interaction, economy);
+                    return;
+                }
             }
+            
+            // AutoMod System
+            if (commandName === 'automod') {
+                const automod = featureManager.getFeature('automod');
+                if (automod) {
+                    const AutoModSystem = require('./features/automod.js');
+                    await AutoModSystem.handleCommand(interaction, automod);
+                    return;
+                }
+            }
+            
+            // Giveaway System
+            if (commandName === 'giveaway') {
+                const giveaway = featureManager.getFeature('giveaway');
+                if (giveaway) {
+                    const GiveawaySystem = require('./features/giveaway.js');
+                    await GiveawaySystem.handleCommand(interaction, giveaway);
+                    return;
+                }
+            }
+            
+            // Voice Creator
+            if (commandName === 'voice') {
+                const voice = featureManager.getFeature('voicecreator');
+                if (voice) {
+                    const VoiceCreator = require('./features/voicecreator.js');
+                    await VoiceCreator.handleCommand(interaction, voice);
+                    return;
+                }
+            }
+            
+            // Translator System
+            if (commandName === 'translate') {
+                const translator = featureManager.getFeature('translator');
+                if (translator) {
+                    const TranslatorSystem = require('./features/translator.js');
+                    await TranslatorSystem.handleCommand(interaction, translator);
+                    return;
+                }
+            }
+            
+            // AFK Keeper
+            if (commandName === 'afk') {
+                const afk = featureManager.getFeature('afk-keeper');
+                if (afk) {
+                    const AFKKeeper = require('./features/afk-keeper.js');
+                    await AFKKeeper.handleCommand(interaction, afk);
+                    return;
+                }
+            }
+            
+            // Jika tidak ada yang handle, coba main commands
+            await require('./main.js').handleInteraction(interaction, client);
         }
     } catch (error) {
         console.error('❌ Interaction error:', error.message);
@@ -672,20 +548,40 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     
     // AutoMod check
-    if (automodSystem && automodSystem.checkMessage) {
-        await automodSystem.checkMessage(message).catch(() => {});
+    const automod = featureManager.getFeature('automod');
+    if (automod && automod.checkMessage) {
+        await automod.checkMessage(message).catch(() => {});
+    }
+    
+    // Chisato AI
+    const chisato = featureManager.getFeature('chisato-ai');
+    if (chisato && chisato.handleMessage) {
+        await chisato.handleMessage(message);
     }
 });
 
+// ==================== VOICE STATE HANDLER ====================
 client.on('voiceStateUpdate', async (oldState, newState) => {
-    // Voice Creator
-    if (voiceCreatorSystem && voiceCreatorSystem.handleVoiceUpdate) {
-        await voiceCreatorSystem.handleVoiceUpdate(oldState, newState).catch(() => {});
-    }
-    
-    // Anime Theater
-    if (animeTheaterSystem && animeTheaterSystem.handleVoiceUpdate) {
-        await animeTheaterSystem.handleVoiceUpdate(oldState, newState).catch(() => {});
+    try {
+        // Voice Creator
+        const voiceCreator = featureManager.getFeature('voicecreator');
+        if (voiceCreator && voiceCreator.handleVoiceUpdate) {
+            await voiceCreator.handleVoiceUpdate(oldState, newState);
+        }
+        
+        // Anime Theater
+        const animeTheater = featureManager.getFeature('anime-theater');
+        if (animeTheater && animeTheater.handleVoiceUpdate) {
+            await animeTheater.handleVoiceUpdate(oldState, newState);
+        }
+        
+        // AFK Keeper
+        const afkKeeper = featureManager.getFeature('afk-keeper');
+        if (afkKeeper && afkKeeper.handleVoiceUpdate) {
+            await afkKeeper.handleVoiceUpdate(oldState, newState);
+        }
+    } catch (error) {
+        console.error('❌ Voice state error:', error.message);
     }
 });
 
@@ -696,9 +592,27 @@ client.on('guildCreate', async (guild) => {
         const owner = await guild.fetchOwner();
         await owner.send({ 
             embeds: [{
-                color: 0x1E90FF,
-                title: '🎉 **TERIMA KASIH!**',
-                description: `Halo **${owner.user.username}**!\n\nBot telah ditambahkan ke **${guild.name}**\n\n**🎵 FITUR BARU!**\n🎵 **/music play** - Putar lagu di voice channel!\n\n**📺 ANIME REMINDER:**\n📺 **/anime-reminder** - Notifikasi episode anime real-time!\n\n**📋 INTERACTIVE MENU:**\n\`/menu\` - Lihat semua fitur bot dengan dropdown!\n\n**🛡️ ANTI NUKE PREMIUM:**\n✅ 15+ Protection Layers\n✅ Auto Backup & Restore\n✅ Whitelist System\n\n**🎮 FITUR LENGKAP:**\n🎮 RPG Game | 🎴 Anime Battle | 🏰 Guild System\n🎪 Festival | 🎬 Theater | 🏆 Tournament\n💰 Economy | 🎫 Ticket | 📊 Monitoring\n\nGunakan **/menu** untuk eksplorasi semua fitur!`
+                color: 0xFF69B4,
+                title: '🎀 **TERIMA KASIH!**',
+                description: `Halo **${owner.user.username}**!\n\nBot telah ditambahkan ke **${guild.name}**\n\n` +
+                    `**🎀 CHISATO AI!**\n` +
+                    `🎀 **/chisato setup** - Chat dengan Nishikigi Chisato!\n` +
+                    `🎨 Minta gambar, Chisato bikin langsung!\n\n` +
+                    `**🎵 MUSIC BOT!**\n` +
+                    `🎵 **/music play** - Putar lagu di voice channel!\n\n` +
+                    `**📺 ANIME REMINDER:**\n` +
+                    `📺 **/anime-reminder** - Notifikasi episode anime real-time!\n\n` +
+                    `**📋 INTERACTIVE MENU:**\n` +
+                    `\`/menu\` - Lihat semua fitur bot dengan dropdown!\n\n` +
+                    `**🛡️ ANTI NUKE PREMIUM:**\n` +
+                    `✅ 15+ Protection Layers\n\n` +
+                    `**🎮 FITUR LENGKAP:**\n` +
+                    `🎮 RPG Game | 🎴 Anime Battle | 🏰 Guild System\n` +
+                    `🎪 Festival | 🎬 Theater | 🏆 Tournament\n` +
+                    `💰 Economy | 🎫 Ticket | 📊 Monitoring\n` +
+                    `🎤 Voice Creator | 🛡️ AFK Keeper\n\n` +
+                    (waBot ? `**📱 WhatsApp Bot:** ✅ Juga berjalan!\n\n` : ``) +
+                    `Gunakan **/menu** untuk eksplorasi semua fitur!`
             }] 
         }).catch(() => {});
     } catch (error) {}
@@ -715,9 +629,9 @@ process.on('unhandledRejection', error => {
 
 // ==================== LOGIN ====================
 client.login(BOT_TOKEN)
-    .then(() => console.log('✅ Bot login berhasil'))
+    .then(() => console.log('✅ Discord Bot login berhasil'))
     .catch(error => {
-        console.error('❌ Login gagal:', error.message);
+        console.error('❌ Discord Login gagal:', error.message);
     });
 
-module.exports = { client };
+module.exports = { client, featureManager };
